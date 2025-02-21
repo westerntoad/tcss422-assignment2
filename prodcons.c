@@ -54,19 +54,24 @@ void *prod_worker(void *arg) {
     stats->multtotal = 0;
     stats->matrixtotal = 0;
 
-    while (get_cnt(ctr) < NUMBER_OF_MATRICES) {
+    while (1) {
         Matrix* m = GenMatrixRandom();
         pthread_mutex_lock(&mutex);
         while (count == BOUNDED_BUFFER_SIZE)
             pthread_cond_wait(&empty, &mutex);
 
+        if (get_cnt(ctr) >= NUMBER_OF_MATRICES) {
+            pthread_cond_signal(&full);
+            pthread_mutex_unlock(&mutex);
+            return stats;
+        }
         put(m);
+        increment_cnt(ctr);
         pthread_cond_signal(&full);
         pthread_mutex_unlock(&mutex);
 
         stats->sumtotal += SumMatrix(m);
         stats->matrixtotal++;
-        increment_cnt(ctr);
     }
     
     return stats;
@@ -111,20 +116,14 @@ void *cons_worker(void *arg) {
             stats->matrixtotal++;
             stats->sumtotal += SumMatrix(m2);
             increment_cnt(ctr);
-            printf("m1=%lx\n", (long) m1);
-            printf("m2=%lx\n", (long) m2);
             m3 = MatrixMultiply(m1, m2);
-            printf("multiplied\n\n");
             stats->multtotal++;
 
             if (m3 == NULL)
                 FreeMatrix(m2);
         }
 
-        printf("m1=%lx\n", (long) m1);
-        printf("m2=%lx\n", (long) m2);
         DisplayMatrix(m3, stdout);
-        printf("displayed\n\n");
         FreeMatrix(m1);
         FreeMatrix(m2);
         FreeMatrix(m3);
