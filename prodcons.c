@@ -110,6 +110,8 @@ void *cons_worker(void *arg) {
             stats->matrixtotal++;
             stats->sumtotal += SumMatrix(m2);
             increment_cnt(ctr);
+            printf("m1=%lx\n", (long) m1);
+            printf("m2=%lx\n\n", (long) m1);
             m3 = MatrixMultiply(m1, m2);
             stats->multtotal++;
 
@@ -120,6 +122,7 @@ void *cons_worker(void *arg) {
         DisplayMatrix(m3, stdout);
         FreeMatrix(m1);
         FreeMatrix(m2);
+        FreeMatrix(m3);
         m1 = NULL;
         m2 = NULL;
         m3 = NULL;
