@@ -41,11 +41,11 @@
 
 int main (int argc, char * argv[]) {
     //int numw = NUMWORK;
-    int numw = 1;
+    int numw = 2;
     //BOUNDED_BUFFER_SIZE=MAX;
-    BOUNDED_BUFFER_SIZE=1200;
+    BOUNDED_BUFFER_SIZE=100;
     //NUMBER_OF_MATRICES=LOOPS;
-    NUMBER_OF_MATRICES=100;
+    NUMBER_OF_MATRICES=10;
     MATRIX_MODE=DEFAULT_MATRIX_MODE;
     if (argc >= 2)
         numw = atoi(argv[1]);

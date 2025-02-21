@@ -31,6 +31,8 @@ pthread_cond_t full = PTHREAD_COND_INITIALIZER;
 
 // Bounded buffer put() get()
 int put(Matrix * value) {
+    printf("put\t%d\n", fill % BOUNDED_BUFFER_SIZE);
+    printf("count\t%d\n", count);
     bigmatrix[fill] = value;
     fill = (fill + 1) % BOUNDED_BUFFER_SIZE;
     count++;
@@ -39,7 +41,10 @@ int put(Matrix * value) {
 }
 
 Matrix * get() {
+    printf("get\t%d\n", use % BOUNDED_BUFFER_SIZE);
+    printf("count\t%d\n", count);
     Matrix * tmp = bigmatrix[use];
+    bigmatrix[use] = NULL;
     use = (use + 1) % BOUNDED_BUFFER_SIZE;
     count--;
 
@@ -61,9 +66,11 @@ void *prod_worker(void *arg) {
         while (count == BOUNDED_BUFFER_SIZE)
             pthread_cond_wait(&empty, &mutex);
 
+        printf("PTOTAL\t%d\n", get_cnt(ctr));
         if (get_cnt(ctr) >= NUMBER_OF_MATRICES) {
             pthread_cond_signal(&full);
             pthread_mutex_unlock(&mutex);
+            printf("PRODUCER RETURN\n");
             return stats;
         }
         put(m);
@@ -75,6 +82,7 @@ void *prod_worker(void *arg) {
         stats->matrixtotal++;
     }
     
+    printf("PRODUCER RETURN\n");
     return stats;
 }
 
@@ -103,20 +111,23 @@ void *cons_worker(void *arg) {
 
         // get m2
         while (m3 == NULL) {
+            printf("CTOTAL\t%d\n", get_cnt(ctr));
             if (get_cnt(ctr) >= NUMBER_OF_MATRICES) {
                 FreeMatrix(m1);
+                printf("CONSUMER RETURN\n");
                 return stats;
             }
 
             pthread_mutex_lock(&mutex);
             while (count == 0)
                 pthread_cond_wait(&full, &mutex);
+
             m2 = get();
+            increment_cnt(ctr);
             pthread_cond_signal(&empty);
             pthread_mutex_unlock(&mutex);
             stats->matrixtotal++;
             stats->sumtotal += SumMatrix(m2);
-            increment_cnt(ctr);
             m3 = MatrixMultiply(m1, m2);
             stats->multtotal++;
 
@@ -133,5 +144,6 @@ void *cons_worker(void *arg) {
         m3 = NULL;
     }
 
+    printf("CONSUMER RETURN\n");
     return stats;
 }
