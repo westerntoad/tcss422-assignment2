@@ -54,7 +54,8 @@ void *prod_worker(void *arg) {
     stats->multtotal = 0;
     stats->matrixtotal = 0;
 
-    while (1) {
+
+    while (get_cnt(ctr) < NUMBER_OF_MATRICES) {
         Matrix* m = GenMatrixRandom();
         pthread_mutex_lock(&mutex);
         while (count == BOUNDED_BUFFER_SIZE)
@@ -123,7 +124,7 @@ void *cons_worker(void *arg) {
                 FreeMatrix(m2);
         }
 
-        DisplayMatrix(m3, stdout);
+        //DisplayMatrix(m3, stdout);
         FreeMatrix(m1);
         FreeMatrix(m2);
         FreeMatrix(m3);

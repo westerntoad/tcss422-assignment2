@@ -41,11 +41,11 @@
 
 int main (int argc, char * argv[]) {
     //int numw = NUMWORK;
-    int numw = 2;
-    BOUNDED_BUFFER_SIZE=MAX;
-    NUMBER_OF_MATRICES=LOOPS;
-    //NUMBER_OF_MATRICES=8;
-    //NUMBER_OF_MATRICES=8;
+    int numw = 1;
+    //BOUNDED_BUFFER_SIZE=MAX;
+    BOUNDED_BUFFER_SIZE=1200;
+    //NUMBER_OF_MATRICES=LOOPS;
+    NUMBER_OF_MATRICES=100;
     MATRIX_MODE=DEFAULT_MATRIX_MODE;
     if (argc >= 2)
         numw = atoi(argv[1]);
@@ -65,38 +65,6 @@ int main (int argc, char * argv[]) {
     time_t t;
     // Seed the random number generator with the system time
     srand((unsigned) time(&t));
-
-    //
-    // Demonstration code to show the use of matrix routines
-    //
-    // DELETE THIS CODE FOR YOUR SUBMISSION
-    // ----------------------------------------------------------
-    /*bigmatrix = (Matrix **) malloc(sizeof(Matrix *) * BOUNDED_BUFFER_SIZE);
-    printf("MATRIX MULTIPLICATION DEMO:\n\n");
-    Matrix *m1, *m2, *m3;
-    for (int i=0;i<NUMBER_OF_MATRICES;i++)
-    {
-    m1 = GenMatrixRandom();
-    m2 = GenMatrixRandom();
-    m3 = MatrixMultiply(m1, m2);
-    if (m3 != NULL)
-    {
-      DisplayMatrix(m1,stdout);
-      printf("    X\n");
-      DisplayMatrix(m2,stdout);
-      printf("    =\n");
-      DisplayMatrix(m3,stdout);
-      printf("\n");
-      FreeMatrix(m3);
-      FreeMatrix(m2);
-      FreeMatrix(m1);
-      m1=NULL;
-      m2=NULL;
-      m3=NULL;
-    }
-    }
-    return 0;*/
-    // ----------------------------------------------------------
 
 
 
@@ -146,6 +114,18 @@ int main (int argc, char * argv[]) {
     //printf("Matrices produced=%d consumed=%d multiplied=%d\n",prodtot,constot,consmul);
     printf("Sum of Matrix elements --> Produced=%d , Consumed=%d\n",prodtot,constot);
     printf("Matrices produced=%d consumed=%d multiplied=%d\n",prs,cos,consmul);
+
+    for (int i = 0; i < numw; i++) {
+        free(prStats[i]);
+        free(coStats[i]);
+    }
+    free(prStats);
+    free(coStats);
+    free(prodCtr);
+    free(consCtr);
+    free(producers);
+    free(consumers);
+    free(bigmatrix);
 
     return 0;
 }
