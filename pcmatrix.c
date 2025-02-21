@@ -43,8 +43,8 @@ int main (int argc, char * argv[]) {
     //int numw = NUMWORK;
     int numw = 2;
     BOUNDED_BUFFER_SIZE=MAX;
-    //NUMBER_OF_MATRICES=LOOPS;
-    NUMBER_OF_MATRICES=8;
+    NUMBER_OF_MATRICES=LOOPS;
+    //NUMBER_OF_MATRICES=8;
     //NUMBER_OF_MATRICES=8;
     MATRIX_MODE=DEFAULT_MATRIX_MODE;
     if (argc >= 2)
@@ -121,8 +121,8 @@ int main (int argc, char * argv[]) {
     ProdConsStats** prStats = malloc(sizeof(ProdConsStats*) * numw);
     ProdConsStats** coStats = malloc(sizeof(ProdConsStats*) * numw);
     for (int i = 0; i < numw; i++) {
-        pthread_join(*producers, (void**) (prStats + i));
-        pthread_join(*consumers, (void**) (coStats + i));
+        pthread_join(*(producers + i), (void**) (prStats + i));
+        pthread_join(*(consumers + i), (void**) (coStats + i));
     }
 
     // These are used to aggregate total numbers for main thread output

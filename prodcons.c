@@ -24,7 +24,8 @@ int fill = 0; // next empty index in bigmatrix
 int use = 0; // index to oldest element in bigmatrix
 int count = 0; // total count of items in bigmatrix
 pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
-pthread_cond_t cond = PTHREAD_COND_INITIALIZER;
+pthread_cond_t empty = PTHREAD_COND_INITIALIZER;
+pthread_cond_t full = PTHREAD_COND_INITIALIZER;
 
 
 
@@ -57,10 +58,10 @@ void *prod_worker(void *arg) {
         Matrix* m = GenMatrixRandom();
         pthread_mutex_lock(&mutex);
         while (count == BOUNDED_BUFFER_SIZE)
-            pthread_cond_wait(&cond, &mutex);
+            pthread_cond_wait(&empty, &mutex);
 
         put(m);
-        pthread_cond_signal(&cond);
+        pthread_cond_signal(&full);
         pthread_mutex_unlock(&mutex);
 
         stats->sumtotal += SumMatrix(m);
@@ -86,9 +87,9 @@ void *cons_worker(void *arg) {
         // get m1
         pthread_mutex_lock(&mutex);
         while (count == 0)
-            pthread_cond_wait(&cond, &mutex);
+            pthread_cond_wait(&full, &mutex);
         m1 = get();
-        pthread_cond_signal(&cond);
+        pthread_cond_signal(&empty);
         pthread_mutex_unlock(&mutex);
         stats->matrixtotal++;
         stats->sumtotal += SumMatrix(m1);
@@ -103,23 +104,27 @@ void *cons_worker(void *arg) {
 
             pthread_mutex_lock(&mutex);
             while (count == 0)
-                pthread_cond_wait(&cond, &mutex);
+                pthread_cond_wait(&full, &mutex);
             m2 = get();
-            pthread_cond_signal(&cond);
+            pthread_cond_signal(&empty);
             pthread_mutex_unlock(&mutex);
             stats->matrixtotal++;
             stats->sumtotal += SumMatrix(m2);
             increment_cnt(ctr);
             printf("m1=%lx\n", (long) m1);
-            printf("m2=%lx\n\n", (long) m1);
+            printf("m2=%lx\n", (long) m2);
             m3 = MatrixMultiply(m1, m2);
+            printf("multiplied\n\n");
             stats->multtotal++;
 
             if (m3 == NULL)
                 FreeMatrix(m2);
         }
 
+        printf("m1=%lx\n", (long) m1);
+        printf("m2=%lx\n", (long) m2);
         DisplayMatrix(m3, stdout);
+        printf("displayed\n\n");
         FreeMatrix(m1);
         FreeMatrix(m2);
         FreeMatrix(m3);
