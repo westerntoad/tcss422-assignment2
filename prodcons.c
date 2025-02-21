@@ -83,8 +83,6 @@ void *cons_worker(void *arg) {
     stats->matrixtotal = 0;
 
     while (get_cnt(ctr) < NUMBER_OF_MATRICES) {
-        //printf("m1=\t%lx\n", (long) m1);
-        //printf("m2=\t%lx\n", (long) m2);
         // get m1
         pthread_mutex_lock(&mutex);
         while (count == 0)
@@ -92,6 +90,8 @@ void *cons_worker(void *arg) {
         m1 = get();
         pthread_cond_signal(&cond);
         pthread_mutex_unlock(&mutex);
+        stats->matrixtotal++;
+        stats->sumtotal += SumMatrix(m1);
         increment_cnt(ctr);
 
         // get m2
@@ -107,18 +107,16 @@ void *cons_worker(void *arg) {
             m2 = get();
             pthread_cond_signal(&cond);
             pthread_mutex_unlock(&mutex);
+            stats->matrixtotal++;
+            stats->sumtotal += SumMatrix(m2);
             increment_cnt(ctr);
-            /*printf("product\tm1=\t%lx\n", (long) m1);
-            printf("product\tm2=\t%lx\n\n", (long) m2);*/
             m3 = MatrixMultiply(m1, m2);
+            stats->multtotal++;
 
             if (m3 == NULL)
                 FreeMatrix(m2);
         }
 
-        /*printf("m1=\t%lx\n", (long) m1);
-        printf("m2=\t%lx\n", (long) m2);
-        printf("m3=\t%lx\n\n", (long) m3);*/
         DisplayMatrix(m3, stdout);
         FreeMatrix(m1);
         FreeMatrix(m2);
