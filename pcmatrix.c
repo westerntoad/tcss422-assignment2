@@ -43,9 +43,9 @@ int main (int argc, char * argv[]) {
     //int numw = NUMWORK;
     int numw = 8;
     //BOUNDED_BUFFER_SIZE=MAX;
-    BOUNDED_BUFFER_SIZE=100;
+    BOUNDED_BUFFER_SIZE=1;
     //NUMBER_OF_MATRICES=LOOPS;
-    NUMBER_OF_MATRICES=10;
+    NUMBER_OF_MATRICES=10000;
     MATRIX_MODE=DEFAULT_MATRIX_MODE;
     if (argc >= 2)
         numw = atoi(argv[1]);

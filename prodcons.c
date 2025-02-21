@@ -23,6 +23,8 @@
 int fill = 0; // next empty index in bigmatrix
 int use = 0; // index to oldest element in bigmatrix
 int count = 0; // total count of items in bigmatrix
+int matricesProduced = 0;
+int matricesConsumed = 0;
 pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 pthread_cond_t empty = PTHREAD_COND_INITIALIZER;
 pthread_cond_t full = PTHREAD_COND_INITIALIZER;
@@ -31,8 +33,6 @@ pthread_cond_t full = PTHREAD_COND_INITIALIZER;
 
 // Bounded buffer put() get()
 int put(Matrix * value) {
-    printf("put\t%d\n", fill % BOUNDED_BUFFER_SIZE);
-    printf("count\t%d\n", count);
     bigmatrix[fill] = value;
     fill = (fill + 1) % BOUNDED_BUFFER_SIZE;
     count++;
@@ -41,10 +41,7 @@ int put(Matrix * value) {
 }
 
 Matrix * get() {
-    printf("get\t%d\n", use % BOUNDED_BUFFER_SIZE);
-    printf("count\t%d\n", count);
     Matrix * tmp = bigmatrix[use];
-    bigmatrix[use] = NULL;
     use = (use + 1) % BOUNDED_BUFFER_SIZE;
     count--;
 
@@ -53,119 +50,94 @@ Matrix * get() {
 
 // Matrix PRODUCER worker thread
 void *prod_worker(void *arg) {
-    counter_t* ctr = (counter_t*) arg;
     ProdConsStats* stats = (ProdConsStats*) malloc(sizeof(ProdConsStats));
     stats->sumtotal = 0;
     stats->multtotal = 0;
     stats->matrixtotal = 0;
 
 
-    while (get_cnt(ctr) < NUMBER_OF_MATRICES) {
+    while (1) {
         Matrix* m = GenMatrixRandom();
         pthread_mutex_lock(&mutex);
         while (count == BOUNDED_BUFFER_SIZE)
             pthread_cond_wait(&empty, &mutex);
 
-        printf("PTOTAL\t%d\n", get_cnt(ctr));
-        if (get_cnt(ctr) >= NUMBER_OF_MATRICES) {
-            pthread_cond_broadcast(&empty);
+        if (matricesProduced >= NUMBER_OF_MATRICES) {
+            pthread_cond_signal(&empty);
             pthread_mutex_unlock(&mutex);
-            printf("PRODUCER RETURN\n");
-            return stats;
+            break;
         }
         put(m);
-        increment_cnt(ctr);
+        matricesProduced++;
+        stats->sumtotal += SumMatrix(m);
         pthread_cond_signal(&full);
         pthread_mutex_unlock(&mutex);
 
-        stats->sumtotal += SumMatrix(m);
         stats->matrixtotal++;
     }
     
-    printf("PRODUCER RETURN\n");
     return stats;
 }
 
 // Matrix CONSUMER worker thread
 void *cons_worker(void *arg) {
-    counter_t* ctr = (counter_t*) arg;
     ProdConsStats* stats = (ProdConsStats*) malloc(sizeof(ProdConsStats));
-    Matrix* m1 = NULL;
-    Matrix* m2 = NULL;
-    Matrix* m3 = NULL;
+    Matrix *m1, *m2, *m3;
     stats->sumtotal = 0;
     stats->multtotal = 0;
     stats->matrixtotal = 0;
 
-    while (get_cnt(ctr) < NUMBER_OF_MATRICES) {
+    while (1) {
         // get m1
         pthread_mutex_lock(&mutex);
-        while (count == 0 && get_cnt(ctr) < NUMBER_OF_MATRICES)
+        while (count == 0 && matricesConsumed < NUMBER_OF_MATRICES)
             pthread_cond_wait(&full, &mutex);
 
-        if (get_cnt(ctr) >= NUMBER_OF_MATRICES) {
-            pthread_cond_broadcast(&full);
+        if (matricesConsumed >= NUMBER_OF_MATRICES) {
+            pthread_cond_signal(&full);
             pthread_mutex_unlock(&mutex);
-            printf("CONSUMER RETURN 1\n");
             return stats;
         }
 
         m1 = get();
+        matricesConsumed++;
+        stats->sumtotal += SumMatrix(m1);
         pthread_cond_signal(&empty);
         pthread_mutex_unlock(&mutex);
         stats->matrixtotal++;
-        stats->sumtotal += SumMatrix(m1);
-        increment_cnt(ctr);
 
         // get m2
         while (m3 == NULL) {
-            printf("CTOTAL\t%d\n", get_cnt(ctr));
-            if (get_cnt(ctr) >= NUMBER_OF_MATRICES) {
-                pthread_mutex_lock(&mutex);
-                pthread_cond_broadcast(&full);
-                pthread_mutex_unlock(&mutex);
-                FreeMatrix(m1);
-                printf("CONSUMER RETURN 2\n");
-                return stats;
-            }
-
             pthread_mutex_lock(&mutex);
-            while (count == 0 && get_cnt(ctr) < NUMBER_OF_MATRICES)
+            while (count == 0 && matricesConsumed < NUMBER_OF_MATRICES)
                 pthread_cond_wait(&full, &mutex);
 
-            if (get_cnt(ctr) >= NUMBER_OF_MATRICES) {
-                pthread_cond_broadcast(&full);
+            if (matricesConsumed >= NUMBER_OF_MATRICES) {
+                pthread_cond_signal(&full);
                 pthread_mutex_unlock(&mutex);
                 FreeMatrix(m1);
-                printf("CONSUMER RETURN 3\n");
                 return stats;
             }
 
             m2 = get();
-            increment_cnt(ctr);
+            matricesConsumed++;
+            stats->sumtotal += SumMatrix(m2);
             pthread_cond_signal(&empty);
             pthread_mutex_unlock(&mutex);
             stats->matrixtotal++;
-            stats->sumtotal += SumMatrix(m2);
             m3 = MatrixMultiply(m1, m2);
-            stats->multtotal++;
 
             if (m3 == NULL)
                 FreeMatrix(m2);
         }
 
         //DisplayMatrix(m3, stdout);
+        stats->multtotal++;
         FreeMatrix(m1);
         FreeMatrix(m2);
         FreeMatrix(m3);
-        m1 = NULL;
-        m2 = NULL;
-        m3 = NULL;
+        m1 = m2 = m3 = NULL;
     }
 
-    pthread_mutex_lock(&mutex);
-    pthread_cond_broadcast(&full);
-    pthread_mutex_unlock(&mutex);
-    printf("CONSUMER RETURN 4\n");
     return stats;
 }
