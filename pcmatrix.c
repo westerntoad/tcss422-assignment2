@@ -41,7 +41,7 @@
 
 int main (int argc, char * argv[]) {
     //int numw = NUMWORK;
-    int numw = 2;
+    int numw = 8;
     //BOUNDED_BUFFER_SIZE=MAX;
     BOUNDED_BUFFER_SIZE=100;
     //NUMBER_OF_MATRICES=LOOPS;

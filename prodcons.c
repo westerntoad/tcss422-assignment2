@@ -100,8 +100,16 @@ void *cons_worker(void *arg) {
     while (get_cnt(ctr) < NUMBER_OF_MATRICES) {
         // get m1
         pthread_mutex_lock(&mutex);
-        while (count == 0)
+        while (count == 0 && get_cnt(ctr) < NUMBER_OF_MATRICES)
             pthread_cond_wait(&full, &mutex);
+
+        if (get_cnt(ctr) >= NUMBER_OF_MATRICES) {
+            pthread_cond_broadcast(&full);
+            pthread_mutex_unlock(&mutex);
+            printf("CONSUMER RETURN 1\n");
+            return stats;
+        }
+
         m1 = get();
         pthread_cond_signal(&empty);
         pthread_mutex_unlock(&mutex);
@@ -117,7 +125,7 @@ void *cons_worker(void *arg) {
                 pthread_cond_broadcast(&full);
                 pthread_mutex_unlock(&mutex);
                 FreeMatrix(m1);
-                printf("CONSUMER RETURN 1\n");
+                printf("CONSUMER RETURN 2\n");
                 return stats;
             }
 
@@ -129,7 +137,7 @@ void *cons_worker(void *arg) {
                 pthread_cond_broadcast(&full);
                 pthread_mutex_unlock(&mutex);
                 FreeMatrix(m1);
-                printf("CONSUMER RETURN 2\n");
+                printf("CONSUMER RETURN 3\n");
                 return stats;
             }
 
@@ -158,6 +166,6 @@ void *cons_worker(void *arg) {
     pthread_mutex_lock(&mutex);
     pthread_cond_broadcast(&full);
     pthread_mutex_unlock(&mutex);
-    printf("CONSUMER RETURN 3\n");
+    printf("CONSUMER RETURN 4\n");
     return stats;
 }
