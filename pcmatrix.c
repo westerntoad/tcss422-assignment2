@@ -41,7 +41,7 @@
 
 int main (int argc, char * argv[]) {
     //int numw = NUMWORK;
-    int numw = 8;
+    int numw = 1;
     //BOUNDED_BUFFER_SIZE=MAX;
     BOUNDED_BUFFER_SIZE=1;
     //NUMBER_OF_MATRICES=LOOPS;
@@ -74,16 +74,12 @@ int main (int argc, char * argv[]) {
     printf("\n");
 
     bigmatrix = (Matrix **) malloc(sizeof(Matrix *) * BOUNDED_BUFFER_SIZE);
-    counter_t* prodCtr = (counter_t*) malloc(sizeof(counter_t));
-    counter_t* consCtr = (counter_t*) malloc(sizeof(counter_t));
-    init_cnt(prodCtr);
-    init_cnt(consCtr);
 
     pthread_t* producers = malloc(sizeof(pthread_t) * numw);
     pthread_t* consumers = malloc(sizeof(pthread_t) * numw);
     for (int i = 0; i < numw; i++) {
-        pthread_create(producers + i, NULL, prod_worker, prodCtr);
-        pthread_create(consumers + i, NULL, cons_worker, consCtr);
+        pthread_create(producers + i, NULL, prod_worker, NULL);
+        pthread_create(consumers + i, NULL, cons_worker, NULL);
     }
 
     ProdConsStats** prStats = malloc(sizeof(ProdConsStats*) * numw);
@@ -121,8 +117,6 @@ int main (int argc, char * argv[]) {
     }
     free(prStats);
     free(coStats);
-    free(prodCtr);
-    free(consCtr);
     free(producers);
     free(consumers);
     free(bigmatrix);

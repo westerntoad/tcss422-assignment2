@@ -65,6 +65,7 @@ void *prod_worker(void *arg) {
         if (matricesProduced >= NUMBER_OF_MATRICES) {
             pthread_cond_signal(&empty);
             pthread_mutex_unlock(&mutex);
+            FreeMatrix(m);
             break;
         }
         put(m);
