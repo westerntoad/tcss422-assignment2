@@ -1,5 +1,11 @@
 CC=gcc
 CFLAGS=-pthread -I. -Wall -Wno-int-conversion -D_GNU_SOURCE -fcommon
+DEBUGFLAGS=-g
+
+# If DEBUG is defined, append DEBUGFLAGS to CFLAGS
+ifeq ($(DEBUG), 1)
+  CFLAGS += $(DEBUGFLAGS)
+endif
 
 #binaries=queueprodcons cpa pthread_mult
 binaries=pcMatrix
