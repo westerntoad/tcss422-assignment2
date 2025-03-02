@@ -116,24 +116,8 @@ int main (int argc, char * argv[])
   printf("Using a shared buffer of size=%d\n", BOUNDED_BUFFER_SIZE);
   printf("With %d producer and consumer thread(s).\n",numw);
   printf("\n");
-  // Here is an example to define one producer and one consumer
+
   bigmatrix = (Matrix **) malloc(sizeof(Matrix *) * BOUNDED_BUFFER_SIZE);
-  // pthread_t producer;
-  // pthread_t consumer;
-  // ProdConsStats* producer_stats;
-  // ProdConsStats* consumer_stats;
-
-  // pthread_create(&producer, NULL, prod_worker, NULL);
-  // pthread_create(&consumer, NULL, cons_worker, NULL);
-  // pthread_join(&producer, (void*) &producer_stats);
-  // pthread_join(&consumer, (void*) &consumer_stats);
-
-  // int matrices_produced = producer_stats->matrixtotal; // total #matrices produced
-  // int matrices_consumed = consumer_stats->matrixtotal; // total #matrices consumed
-  // int produced_total_sum = producer_stats->sumtotal; // total sum of elements for matrices produced
-  // int consumed_total_sum = consumer_stats->sumtotal; // total sum of elements for matrices consumed
-  // int total_multiplications = consumer_stats->multtotal; // total # multiplications
-
   pthread_t threads[NUMWORK * 2];
   ProdConsStats* return_values[NUMWORK * 2];
 
@@ -152,6 +136,7 @@ int main (int argc, char * argv[])
     }
   }
 
+  // join threads, recieving stats from worker functions
   for (int i = 0; i < NUMWORK * 2; i++) {
     if (i % 2 == 0) {
       if (pthread_join(threads[i], (void*) &return_values[i]) != 0) {
@@ -164,12 +149,14 @@ int main (int argc, char * argv[])
     }
   }
 
+  // initialize total stats
   int matrices_produced = 0; // total #matrices produced
   int matrices_consumed = 0; // total #matrices consumed
   int produced_total_sum = 0; // total sum of elements for matrices produced
   int consumed_total_sum = 0; // total sum of elements for matrices consumed
   int total_multiplications = 0; // total # multiplications
 
+  // loop over return_values, summing stats from each producer/consumer worker
   for (int i = 0; i < NUMWORK * 2; i++) {
     if (i % 2 == 0) {
       matrices_produced += return_values[i]->matrixtotal;
@@ -181,6 +168,7 @@ int main (int argc, char * argv[])
     }
   }
 
+  // free resources
   for (int i = 0; i < BOUNDED_BUFFER_SIZE; i++) {
     if (bigmatrix[i] != NULL) {
       FreeMatrix(bigmatrix[i]);
