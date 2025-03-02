@@ -55,7 +55,7 @@ void *prod_worker(void *arg)
   stats->sumtotal = 0;  
   Matrix* matrix;
 
-  while (get_cnt(counters.prod) < NUMBER_OF_MATRICES) {
+  while (1) {
 
     matrix = GenMatrixRandom();
      
@@ -74,17 +74,18 @@ void *prod_worker(void *arg)
       break;
     }
 
-    // add a matrix to the buffer, and signal consumers
+    // add a matrix to the buffer, signal a consumers, record stats
     put(matrix);
     matrices++;
     stats->sumtotal += SumMatrix(matrix);
-    stats->matrixtotal++;
     increment_cnt(counters.prod);
     pthread_cond_signal(&cons_condition);
     pthread_mutex_unlock(&mutex);
-  }
 
-  // shutdown producers
+    // non-critical stat
+    stats->matrixtotal++;
+
+  }
 
   return (void*) stats;
 }
@@ -100,13 +101,14 @@ void *cons_worker(void *arg)
   Matrix* matrix_two = NULL;
   Matrix* matrix_three = NULL;
 
-  while (get_cnt(counters.cons) < NUMBER_OF_MATRICES) {
+  while (1) {
 
     // reset matrix_three
     if (matrix_three != NULL) {
       FreeMatrix(matrix_three);
       matrix_three = NULL;
     }
+
     pthread_mutex_lock(&mutex);
 
     // wait while buffer empty and NUMBER_OF_MATRICES has not been consumed
@@ -118,24 +120,21 @@ void *cons_worker(void *arg)
       if (matrix_one != NULL) {
         FreeMatrix(matrix_one);
       }
-      if (matrix_three != NULL) {
-        FreeMatrix(matrix_three);
-      }
       pthread_cond_broadcast(&prod_condition);
       pthread_cond_broadcast(&cons_condition);
       pthread_mutex_unlock(&mutex);
       break;
     }
 
-    // otherwise, get matrix
+    // otherwise, get matrix, record stats
     matrix_one = get();
     matrices--;
+    stats->sumtotal += SumMatrix(matrix_one);
+    increment_cnt(counters.cons);
     pthread_cond_signal(&prod_condition);
     pthread_mutex_unlock(&mutex);
 
-    stats->sumtotal += SumMatrix(matrix_one);
     stats->matrixtotal++;
-    increment_cnt(counters.cons);
 
     // while matrix_three is NULL (due to reset, first loop, or ineffective multiplication)
     while (matrix_three == NULL) {
@@ -152,16 +151,17 @@ void *cons_worker(void *arg)
         break;
       }
 
-      // get matrix
+      // get matrix, record stats
       matrix_two = get();
       matrices--;
+      stats->sumtotal += SumMatrix(matrix_two);
+      increment_cnt(counters.cons);
       pthread_cond_signal(&prod_condition);
       pthread_mutex_unlock(&mutex);
 
       // record stats, and test multiplication
       stats->matrixtotal++;
-      increment_cnt(counters.cons);
-      stats->sumtotal += SumMatrix(matrix_two);
+
       matrix_three = MatrixMultiply(matrix_one, matrix_two);
 
       // always free matrix_two, and free matrix_one if multiplication is successful

@@ -117,7 +117,7 @@ int main (int argc, char * argv[])
   printf("With %d producer and consumer thread(s).\n",numw);
   printf("\n");
 
-  bigmatrix = (Matrix **) malloc(sizeof(Matrix *) * BOUNDED_BUFFER_SIZE);
+  bigmatrix = (Matrix **) malloc(BOUNDED_BUFFER_SIZE * sizeof(Matrix *));
   pthread_t threads[NUMWORK * 2];
   ProdConsStats* return_values[NUMWORK * 2];
 
@@ -166,13 +166,7 @@ int main (int argc, char * argv[])
       consumed_total_sum += return_values[i]->sumtotal;
       total_multiplications += return_values[i]->multtotal;
     }
-  }
-
-  // free resources
-  for (int i = 0; i < BOUNDED_BUFFER_SIZE; i++) {
-    if (bigmatrix[i] != NULL) {
-      FreeMatrix(bigmatrix[i]);
-    }
+    free(return_values[i]);
   }
   free(bigmatrix);
   // consume ProdConsStats from producer and consumer threads [HINT: return from join]
