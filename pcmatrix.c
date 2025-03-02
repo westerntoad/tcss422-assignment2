@@ -118,69 +118,75 @@ int main (int argc, char * argv[])
   printf("\n");
   // Here is an example to define one producer and one consumer
   bigmatrix = (Matrix **) malloc(sizeof(Matrix *) * BOUNDED_BUFFER_SIZE);
-  pthread_t producer;
-  pthread_t consumer;
-  ProdConsStats* producer_stats;
-  ProdConsStats* consumer_stats;
+  // pthread_t producer;
+  // pthread_t consumer;
+  // ProdConsStats* producer_stats;
+  // ProdConsStats* consumer_stats;
 
-  pthread_create(&producer, NULL, prod_worker, NULL);
-  pthread_create(&consumer, NULL, cons_worker, NULL);
-  pthread_join(&producer, (void*) &producer_stats);
-  pthread_join(&consumer, (void*) &consumer_stats);
+  // pthread_create(&producer, NULL, prod_worker, NULL);
+  // pthread_create(&consumer, NULL, cons_worker, NULL);
+  // pthread_join(&producer, (void*) &producer_stats);
+  // pthread_join(&consumer, (void*) &consumer_stats);
 
-  int matrices_produced = producer_stats->matrixtotal; // total #matrices produced
-  int matrices_consumed = consumer_stats->matrixtotal; // total #matrices consumed
-  int produced_total_sum = producer_stats->sumtotal; // total sum of elements for matrices produced
-  int consumed_total_sum = consumer_stats->sumtotal; // total sum of elements for matrices consumed
-  int total_multiplications = consumer_stats->multtotal; // total # multiplications
+  // int matrices_produced = producer_stats->matrixtotal; // total #matrices produced
+  // int matrices_consumed = consumer_stats->matrixtotal; // total #matrices consumed
+  // int produced_total_sum = producer_stats->sumtotal; // total sum of elements for matrices produced
+  // int consumed_total_sum = consumer_stats->sumtotal; // total sum of elements for matrices consumed
+  // int total_multiplications = consumer_stats->multtotal; // total # multiplications
 
-  // pthread_t threads[NUMWORK * 2];
-  // ProdConsStats* return_values[NUMWORK * 2];
+  pthread_t threads[NUMWORK * 2];
+  ProdConsStats* return_values[NUMWORK * 2];
 
-  // // https://stackoverflow.com/questions/35403892/creating-threads-in-a-loop
-  // for (int i = 0; i < NUMWORK * 2; i++) {
-  //   if (i % 2 == 0) {
-  //     if (pthread_create(&threads[i], NULL, prod_worker, NULL) != 0) {
-  //       fprintf(stderr, "error: Cannot create thread # %d\n", i);
-  //       break;
-  //     }
-  //   } else {
-  //     if (pthread_create(&threads[i], NULL, cons_worker, NULL) != 0) {
-  //       fprintf(stderr, "error: Cannot create thread # %d\n", i);
-  //       break;
-  //   }
-  //   }
-  // }
+  // https://stackoverflow.com/questions/35403892/creating-threads-in-a-loop
+  for (int i = 0; i < NUMWORK * 2; i++) {
+    if (i % 2 == 0) {
+      if (pthread_create(&threads[i], NULL, prod_worker, NULL) != 0) {
+        fprintf(stderr, "error: Cannot create thread # %d\n", i);
+        break;
+      }
+    } else {
+      if (pthread_create(&threads[i], NULL, cons_worker, NULL) != 0) {
+        fprintf(stderr, "error: Cannot create thread # %d\n", i);
+        break;
+    }
+    }
+  }
 
-  // for (int i = 0; i < NUMWORK * 2; i++) {
-  //   if (i % 2 == 0) {
-  //     if (pthread_join(threads[i], (void**) &return_values[i]) != 0) {
-  //       fprintf(stderr, "error: Cannot join thread # %d\n", i);
-  //     }
-  //   } else {
-  //     if (pthread_join(threads[i], (void**) &return_values[i]) != 0) {
-  //       fprintf(stderr, "error: Cannot join thread # %d\n", i);
-  //     }
-  //   }
-  // }
+  for (int i = 0; i < NUMWORK * 2; i++) {
+    if (i % 2 == 0) {
+      if (pthread_join(threads[i], (void*) &return_values[i]) != 0) {
+        fprintf(stderr, "error: Cannot join thread # %d\n", i);
+      }
+    } else {
+      if (pthread_join(threads[i], (void*) &return_values[i]) != 0) {
+        fprintf(stderr, "error: Cannot join thread # %d\n", i);
+      }
+    }
+  }
 
-  // int matrices_produced; // total #matrices produced
-  // int matrices_consumed; // total #matrices consumed
-  // int produced_total_sum; // total sum of elements for matrices produced
-  // int consumed_total_sum; // total sum of elements for matrices consumed
-  // int total_multiplications; // total # multiplications
+  int matrices_produced = 0; // total #matrices produced
+  int matrices_consumed = 0; // total #matrices consumed
+  int produced_total_sum = 0; // total sum of elements for matrices produced
+  int consumed_total_sum = 0; // total sum of elements for matrices consumed
+  int total_multiplications = 0; // total # multiplications
 
-  // for (int i = 0; i < NUMWORK * 2; i++) {
-  //   if (i % 2 == 0) {
-  //     matrices_produced += return_values[i]->matrixtotal;
-  //     produced_total_sum += return_values[i]->sumtotal;
-  //   } else {
-  //     matrices_consumed += return_values[i]->matrixtotal;
-  //     consumed_total_sum += return_values[i]->sumtotal;
-  //     total_multiplications += return_values[i]->multtotal;
-  //   }
-  // }
+  for (int i = 0; i < NUMWORK * 2; i++) {
+    if (i % 2 == 0) {
+      matrices_produced += return_values[i]->matrixtotal;
+      produced_total_sum += return_values[i]->sumtotal;
+    } else {
+      matrices_consumed += return_values[i]->matrixtotal;
+      consumed_total_sum += return_values[i]->sumtotal;
+      total_multiplications += return_values[i]->multtotal;
+    }
+  }
 
+  for (int i = 0; i < BOUNDED_BUFFER_SIZE; i++) {
+    if (bigmatrix[i] != NULL) {
+      FreeMatrix(bigmatrix[i]);
+    }
+  }
+  free(bigmatrix);
   // consume ProdConsStats from producer and consumer threads [HINT: return from join]
   // add up total matrix stats in prs, cos, prodtot, constot, consmul
 

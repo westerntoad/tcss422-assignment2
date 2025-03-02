@@ -41,6 +41,7 @@ int put(Matrix * value)
 Matrix * get()
 {
   Matrix* matrix = bigmatrix[use];
+  bigmatrix[use] = NULL;
   use = (use + 1) % BOUNDED_BUFFER_SIZE;
   return matrix;
 }
@@ -53,28 +54,38 @@ void *prod_worker(void *arg)
   stats->multtotal = 0;
   stats->sumtotal = 0;  
   Matrix* matrix;
-while (get_cnt(counters.prod) < NUMBER_OF_MATRICES) {
-    
 
-    matrix = GenMatrixRandom(matrix);
-    
+  while (get_cnt(counters.prod) < NUMBER_OF_MATRICES) {
+
+    matrix = GenMatrixRandom();
+     
     pthread_mutex_lock(&mutex);
-    while (matrices >= BOUNDED_BUFFER_SIZE) {
-        pthread_cond_wait(&prod_condition, &mutex);
+
+    // wait while the buffer is full
+    while (matrices == BOUNDED_BUFFER_SIZE && get_cnt(counters.prod) < NUMBER_OF_MATRICES)
+      pthread_cond_wait(&prod_condition, &mutex);
+
+    // if NUMBER_OF_MATRCICES has been reached, then break
+    if (get_cnt(counters.prod) == NUMBER_OF_MATRICES) {
+      FreeMatrix(matrix);
+      pthread_cond_broadcast(&prod_condition);
+      pthread_cond_broadcast(&cons_condition);
+      pthread_mutex_unlock(&mutex);
+      break;
     }
-    if (matrices < BOUNDED_BUFFER_SIZE) {
-        matrices++;
-        put(matrix);
-        stats->sumtotal += SumMatrix(matrix);
-        stats->matrixtotal++;
-        increment_cnt(counters.prod);
-        pthread_cond_signal(&cons_condition);
-    } else {
-        FreeMatrix(matrix);
-        pthread_cond_signal(&cons_condition);
-    }
+
+    // add a matrix to the buffer, and signal consumers
+    put(matrix);
+    matrices++;
+    stats->sumtotal += SumMatrix(matrix);
+    stats->matrixtotal++;
+    increment_cnt(counters.prod);
+    pthread_cond_signal(&cons_condition);
     pthread_mutex_unlock(&mutex);
-}
+  }
+
+  // shutdown producers
+
   return (void*) stats;
 }
 
@@ -87,48 +98,72 @@ void *cons_worker(void *arg)
   stats->sumtotal = 0;
   Matrix* matrix_one = NULL;
   Matrix* matrix_two = NULL;
+  Matrix* matrix_three = NULL;
 
-  while (get_cnt(counters.cons) < NUMBER_OF_MATRICES)
-  {
-    Matrix* matrix_three = NULL;
-    pthread_mutex_lock(&mutex);
-    while (matrices < 1)
-      pthread_cond_wait(&cons_condition, &mutex);
-    if (matrices > 0) {
-      matrix_one = get();
-      stats->sumtotal += SumMatrix(matrix_one);
-      stats->matrixtotal++;
-      increment_cnt(counters.cons);
-      matrices--;
+  while (get_cnt(counters.cons) < NUMBER_OF_MATRICES) {
+
+    if (matrix_three != NULL) {
+      FreeMatrix(matrix_three);
+      matrix_three = NULL;
     }
+    pthread_mutex_lock(&mutex);
+
+    // wait while buffer is empty
+    while (matrices == 0 && get_cnt(counters.cons) < NUMBER_OF_MATRICES)
+      pthread_cond_wait(&cons_condition, &mutex);
+
+    if (get_cnt(counters.cons) == NUMBER_OF_MATRICES) {
+      if (matrix_one != NULL) {
+        FreeMatrix(matrix_one);
+      }
+      if (matrix_three != NULL) {
+        FreeMatrix(matrix_three);
+      }
+      pthread_cond_broadcast(&prod_condition);
+      pthread_cond_broadcast(&cons_condition);
+      pthread_mutex_unlock(&mutex);
+      break;
+    }
+
+    matrix_one = get();
+
+    matrices--;
     pthread_cond_signal(&prod_condition);
     pthread_mutex_unlock(&mutex);
 
-    pthread_mutex_lock(&mutex);
+    stats->sumtotal += SumMatrix(matrix_one);
+    stats->matrixtotal++;
+    increment_cnt(counters.cons);
+
     while (matrix_three == NULL) {
-      if (matrices < 1 && get_cnt(counters.prod) >= NUMBER_OF_MATRICES) break;
-      while (matrices < 1) {
+
+      pthread_mutex_lock(&mutex);
+
+      while (matrices == 0 && get_cnt(counters.cons) < NUMBER_OF_MATRICES) {
         pthread_cond_wait(&cons_condition, &mutex);
       }
-      if (matrices > 0) {
-        matrix_two = get();
-        stats->sumtotal += SumMatrix(matrix_two);
-        stats->matrixtotal++;
-        matrices--;
-        increment_cnt(counters.cons);
-        if (matrix_two != NULL) {
-          matrix_three = MatrixMultiply(matrix_one, matrix_two);
-          FreeMatrix(matrix_two);
-        }
+
+      if (get_cnt(counters.cons) == NUMBER_OF_MATRICES) {
+        pthread_mutex_unlock(&mutex);
+        break;
+      }
+
+      matrix_two = get();
+      matrices--;
+      stats->matrixtotal++;
+      pthread_cond_signal(&prod_condition);
+      pthread_mutex_unlock(&mutex);
+      increment_cnt(counters.cons);
+      stats->sumtotal += SumMatrix(matrix_two);
+      matrix_three = MatrixMultiply(matrix_one, matrix_two);
+      FreeMatrix(matrix_two);
+      if (matrix_three != NULL) {
+        FreeMatrix(matrix_one);
+        matrix_one = NULL;
+        stats->multtotal++;
       }
     }
-    pthread_cond_signal(&prod_condition);
-    pthread_mutex_unlock(&mutex);
-    if (matrix_three != NULL) {
-      stats->multtotal++;
-      free(matrix_three);
-    }
-    FreeMatrix(matrix_one);
   }
+  
   return (void*) stats;
 }
