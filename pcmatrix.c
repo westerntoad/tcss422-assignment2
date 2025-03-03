@@ -29,6 +29,8 @@
  *  TCSS 422 - Operating Systems
  */
 
+// Authors: Conner Webber & Abraham Engebretson
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <pthread.h>
@@ -40,12 +42,10 @@
 #include "pcmatrix.h"
 
 int main (int argc, char * argv[]) {
-    //int numw = NUMWORK;
-    int numw = 1;
-    //BOUNDED_BUFFER_SIZE=MAX;
-    BOUNDED_BUFFER_SIZE=1;
-    //NUMBER_OF_MATRICES=LOOPS;
-    NUMBER_OF_MATRICES=10000;
+    // rewrote this section to be more concise comparerd to given skeleton code
+    int numw = NUMWORK;
+    BOUNDED_BUFFER_SIZE=MAX;
+    NUMBER_OF_MATRICES=LOOPS;
     MATRIX_MODE=DEFAULT_MATRIX_MODE;
     if (argc >= 2)
         numw = atoi(argv[1]);
@@ -73,8 +73,10 @@ int main (int argc, char * argv[]) {
     printf("With %d producer and consumer thread(s).\n",numw);
     printf("\n");
 
+    // allocate buffer
     bigmatrix = (Matrix **) malloc(sizeof(Matrix *) * BOUNDED_BUFFER_SIZE);
 
+    // initialzie & create arrays of producers & consumers
     pthread_t* producers = malloc(sizeof(pthread_t) * numw);
     pthread_t* consumers = malloc(sizeof(pthread_t) * numw);
     for (int i = 0; i < numw; i++) {
@@ -82,8 +84,10 @@ int main (int argc, char * argv[]) {
         pthread_create(consumers + i, NULL, cons_worker, NULL);
     }
 
+    // initialize & create arrays for stats
     ProdConsStats** prStats = malloc(sizeof(ProdConsStats*) * numw);
     ProdConsStats** coStats = malloc(sizeof(ProdConsStats*) * numw);
+    // join workers, taking the stats returned from workers into array
     for (int i = 0; i < numw; i++) {
         pthread_join(*(producers + i), (void**) (prStats + i));
         pthread_join(*(consumers + i), (void**) (coStats + i));
@@ -96,8 +100,7 @@ int main (int argc, char * argv[]) {
     int constot = 0; // total sum of elements for matrices consumed
     int consmul = 0; // total # multiplications
 
-    // consume ProdConsStats from producer and consumer threads [HINT: return from join]
-    // add up total matrix stats in prs, cos, prodtot, constot, consmul
+    // sum all stats returned from workers
     for (int i = 0; i < numw; i++) {
         prs += (**(prStats + i)).matrixtotal;
         cos += (**(coStats + i)).matrixtotal;
@@ -106,11 +109,10 @@ int main (int argc, char * argv[]) {
         consmul += (**(coStats + i)).multtotal;
     }
 
-    //printf("Sum of Matrix elements --> Produced=%d = Consumed=%d\n",prs,cos);
-    //printf("Matrices produced=%d consumed=%d multiplied=%d\n",prodtot,constot,consmul);
     printf("Sum of Matrix elements --> Produced=%d , Consumed=%d\n",prodtot,constot);
     printf("Matrices produced=%d consumed=%d multiplied=%d\n",prs,cos,consmul);
 
+    // free all junk :p
     for (int i = 0; i < numw; i++) {
         free(prStats[i]);
         free(coStats[i]);
